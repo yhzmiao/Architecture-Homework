@@ -1,0 +1,286 @@
+%!TEX TS-program = xelatex  
+%!TEX encoding = UTF-8 Unicode  
+
+
+
+\documentclass[a4paper,11pt]{article}
+\usepackage{indentfirst}
+\usepackage{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{xeCJK}
+\geometry{top=2.54cm,bottom=2.54cm,left=3.18cm,right=3.18cm}
+
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+
+\author{余宏忠 \\ 5140309470}
+\title{Assignment of Memory Hierarchy}
+
+\begin{document}
+	\maketitle
+\section{Caching}
+分析如下:
+\begin{itemize}
+\item 通过第一行的数据可以得到Block size。因为恰好hit两次，说明只能是较为接近的2和4hit了，也就说明Block size为8 bytes。
+\item 通过第二行的数据可以得到的是关联度，因为每次地址访问的地址长度过大，无法区分，所以只有关联度影响hit率(其实替换方式也会影响，但在这里不会)，而hit了三次根据数据，只能是第二次1536，1024和512有hit，故关联度为4。
+\item 第三行也有九次也是hit了三次，和第二次一模一样，说明每一路的size不足以区分64和128，因此总cache size为256bytes。
+\item 第四行很明显是为了测试替换的方式，而注意到只有两次hit说明第二次512没有hit到，也就是被移除了，而0并没有被移除过，因此只能是LRU模式。
+\end{itemize} 
+综上，该Cache为一个总大小为256bytes,Block size为8bytes的4路LRU模式Cache。
+\section{Memory Address Translation}
+\begin{enumerate}
+\item 虚拟地址为: 0x03a9 \\
+\begin{itemize}
+	\item 二进制表达: 00 0011 1010 1001
+	\item 
+	表格3如下:
+	\begin{center}
+		\begin{tabular}{l|c} \hline
+			Parameter & Value \\ \hline
+			VPN &  0000 1110 (0E) \\ \hline
+			TLB index & 10 (2) \\ \hline
+			TLB tag & 00 0011 (03) \\ \hline
+			TLB hit? & N \\ \hline
+			Page fault? & N \\ \hline
+			PPN & 01 0001 (11) \\ \hline
+		\end{tabular}
+	\end{center}
+	\item 物理地址为 0100 0110 1001
+	\item 
+	表格4如下:
+	\begin{center}
+		\begin{tabular}{l|c} \hline 
+			Parameter & Value \\ \hline
+			Byte offset & 01 (1) \\ \hline
+			Cache index & 1010 (A) \\ \hline
+			Cache tag & 01 0001 (11) \\ \hline 
+			Cache hit & N \\ \hline
+			Cache byte returned & - \\ \hline 
+		\end{tabular}
+	\end{center}
+\end{itemize}
+\item 虚拟地址为: 0x0040 \\
+\begin{itemize}
+	\item 二进制表达: 00 0000 0100 0000
+	\item 
+	表格3如下:
+	\begin{center}
+		\begin{tabular}{l|c} \hline
+			Parameter & Value \\ \hline
+			VPN & 0000 0001 (01) \\ \hline
+			TLB index & 00 (0) \\ \hline
+			TLB tag & 00 0000 (00) \\ \hline
+			TLB hit? & N \\ \hline
+			Page fault? & Y \\ \hline
+			PPN & - \\ \hline
+		\end{tabular}
+	\end{center}
+	\item 没有对应物理地址和Cache的问题。
+\end{itemize}
+\item 虚拟地址为: 0x03d7 \\
+\begin{itemize}
+	\item 二进制表达: 00 0011 1101 0111
+	\item 
+	表格3如下:
+	\begin{center}
+		\begin{tabular}{l|c} \hline
+			Parameter & Value \\ \hline
+			VPN &  0000 1111 (0F) \\ \hline
+			TLB index & 11 (3) \\ \hline
+			TLB tag & 00 0011 (03) \\ \hline
+			TLB hit? & Y \\ \hline
+			Page fault? & N \\ \hline
+			PPN & 00 1101 (0D) \\ \hline
+		\end{tabular}
+	\end{center}
+	\item 物理地址为 0011 0101 0111
+	\item 
+	表格4如下:
+	\begin{center}
+		\begin{tabular}{l|c} \hline 
+			Parameter & Value \\ \hline
+			Byte offset & 11 (3) \\ \hline
+			Cache index & 0101 (5) \\ \hline
+			Cache tag & 00 1101 (0D) \\ \hline 
+			Cache hit & Y \\ \hline
+			Cache byte returned & 1D \\ \hline 
+		\end{tabular}
+	\end{center}
+\end{itemize}
+\end{enumerate}
+\section{Cache Parameters}
+\begin{enumerate}
+	\item 正确，因为容量不变导致set数减半，tag数也减半。
+	\item 错误，因为容量和line size都不变，tag数不变。
+	\item 正确，因为容量增大了，tag长度变大，冲突导致的miss变少。
+	\item 错误，因为只有line size不变，原本的compulsory misses的仍然会发生。
+	\item 正确，因为每次可以有更多数据进入Cache中，更高概率能减少compulsory miss。
+\end{enumerate}
+\section{Cache and Virtual Memory}
+\begin{enumerate}
+	\item 总的set数为$2^{11}$，一共需要11bits。
+	\item 每个set有 $64$ bytes，一共$2^{17}$bytes = 128KB
+	\item 总共有8个可能的位置，因而有3位overlap。
+	\item Index: 16-6 Offset:5-0
+	\item Frame number: 31-14 Offset:13-0
+	\item 总大小:$2^{14}$bytes = 16KB
+	\item 总大小:$2^{10 + 10 + 14}$bytes = 16GB
+	\item 总大小:$2^32$bytes = 4GB
+\end{enumerate}
+\section{Caches}
+\begin{center}
+	\begin{tabular} {c|c|c|c|c} \hline
+	 & 1 & 2 & 3 & 4 \\ \hline
+	 1 & miss & miss & miss & miss \\ \hline 
+	 4 & miss & miss & miss & miss \\ \hline
+	 8 & miss & miss & miss & miss \\ \hline
+	 5 & miss & hit & miss & miss \\ \hline
+	 20 & miss & miss & miss & miss \\ \hline
+	 17 & miss & miss & miss & miss \\ \hline
+	 19 & miss & hit & miss & miss \\ \hline
+	 56 & miss & miss & miss & miss \\ \hline
+	 9 & miss & hit & miss & miss \\ \hline
+	 11 & miss & hit & miss & miss \\ \hline
+	 4 & miss & miss & hit & hit \\ \hline
+	 43 & miss & miss & miss & miss \\ \hline
+	 5 & hit & hit & hit & hit \\ \hline
+	 6 & miss & hit & miss & miss \\ \hline
+	 9 & hit & miss & hit & hit \\ \hline
+	 17 & hit & hit & hit & hit \\ \hline
+		
+	\end{tabular}
+\end{center}
+\begin{enumerate}
+	\item 最终的Cache:
+	\begin{center}
+		\begin{tabular}{c|c|c|c|c|c|c|c|c} \hline
+			Index & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\ \hline
+			Address & - & 17 & - & 19 & 4 & 5 & 6 & - \\ \hline
+			Index & 8 & 9 & 10 & 11 & 12 & 13 & 14 & 15 \\ \hline
+			Address & 56 & 9 & - & 43 & - & - & - & - \\ \hline  
+		\end{tabular}
+	\end{center}
+	\item 最终的Cache:
+	\begin{center}
+		\begin{tabular}{c|c|c|c|c} \hline
+			Index & 0 & 4 & 8 & 12 \\ \hline
+			Address & 16-19 & 4-7 & 8-11 & - \\ \hline 
+		\end{tabular}
+	\end{center}
+	\item 最终的Cache:
+	\begin{center}
+		\begin{tabular}{c|c|c|c|c|c|c|c|c} \hline
+			Index & 0 & 1 & 2 & 3 & 4 & 5 & 6 & 7 \\ \hline
+			Address & 56 & 17 & - & 43 & 4 & 5 & 6 & - \\ \hline
+			Address & 8 & 9 & - & 11 & 20 & - & - & - \\ \hline  
+		\end{tabular}
+	\end{center}
+	\item 最终的Cache:
+	\begin{center}
+		\begin{tabular}{c|c} \hline
+			Index & 0 \\ \hline
+			Address & 17 \\ \hline
+			Address & 9 \\ \hline
+			Address & 6 \\ \hline 
+			Address & 5 \\ \hline 
+			Address & 43 \\ \hline 
+			Address & 4 \\ \hline 
+			Address & 11 \\ \hline 
+			Address & 56 \\ \hline 
+			Address & 19 \\ \hline 
+			Address & 20 \\ \hline 
+			Address & 8 \\ \hline 
+			Address & 1 \\ \hline 
+			Address & - \\ \hline
+			Address & - \\ \hline
+			Address & - \\ \hline
+			Address & - \\ \hline
+		\end{tabular}
+	\end{center}
+\end{enumerate}
+\section{}
+\begin{enumerate}
+	\item 增加是因为有spatial locality得到了更多相邻近的地址，减少是因为temporal locality，只能存贮更少的最近访问的地址。
+	\item 不一定，因为不同的block size对应的miss penalty不一样，需要结合二者综合考虑。
+\end{enumerate}
+\section{}
+\begin{enumerate}
+	\item $T_{average} = t_{L1} + m_1 \times t_{p1} = t_{L1} + m_1\times (t_{L2} + m_2\times t_{p2})$
+	\item $m_{global} = m_1\times m_2$
+	\item $t_{p2}=(20 + 1)\times (512 / 32) = 336$ cycles
+	\item \begin{itemize}
+		\item 对于L1来说:31-11:Tag 10-2:Index 1-0:Offset
+	\end{itemize}
+	\item 对于L2来说:31-17:Tag 16-4:Index 3-0:Offset
+	\item 总的CPI增加:
+	\[
+		T_{inc} = m_1\times p_{L1} = m_1\times (t_{L2} + m_2\times p_{L2}) = 4\% \times (8 + 40\% \times 336) \approx 5.7\, \rm{cycles}
+	\]
+\end{enumerate}
+\section{Cache Organization}
+\begin{enumerate}
+	\item 最少是全关联，最多是直接映射。
+	\item 最少的是直接映射，最多的是全关联。
+	\item \begin{itemize}
+		\item 51
+		\item 0
+		\item 51
+	\end{itemize}
+\end{enumerate}
+\section{Victim Caches}
+\begin{enumerate}
+	\item 是在Cache和下一级存贮之间的一个全关联的Cache，一般容量较小。在Cache中没找到时，通过找Victim Cache从而减少miss penalty。
+	\item 一个是在开始之前取一些，一个是在退出之后留一些。两者存在相似之处，都是通过额外得到一部分Data来降低L1 Cache的miss penalty，同时，它们本身也都是Cache。
+\end{enumerate}
+\section{Loop Ordering}
+\subsection*{Problem A}
+\begin{itemize}
+	\item 总miss:
+	\[
+		8 * 128 = 1024
+	\]
+	\item 总miss:
+	\[
+		128 * 8 = 1024
+	\]
+\end{itemize}
+\subsection*{Problem B}
+\begin{itemize}
+	\item 只需要1行即可。
+	\item 需要128行。
+\end{itemize}
+\subsection*{Problem C}
+\begin{itemize}
+	\item 总miss也为1024
+	\item 总miss也为1024
+	\item 不能，因为本题中两个loop的miss都是一定发生的，增大Cache并不能减少这样的miss。
+	\item 可以，因为本题中两个loop的spatial locality很高。
+\end{itemize}
+\section{2.11}
+\begin{enumerate}
+	\item \begin{itemize}
+		\item 使用的话:$120 + 16 = 136$ cycles
+		\item 不使用的话:$120 + 32 * 4 = 248$ cycles
+	\end{itemize}
+	\item 相比而言，该方法不需要使用额外硬件，同时能够有效降低miss penalty。在Block size较大时，效果会更好。而Block size较小时，多级Cache效果会更好。
+\end{enumerate}
+\section{2.12}
+\begin{enumerate}
+	\item 16B，和L2 Cache的相匹配。
+	\item 2倍的加速，因为nonmerging只使用一半的带宽。
+	\item Blocking的会等到数据写入完毕，Nonblocking的则会直接从write buffer中读取。
+\end{enumerate}
+\section{2.13}
+\begin{enumerate}
+	\item 应该为1Gbit，因此需要$16 + 2 = 18$个chips，数据读写的带宽为4bits。
+	\item 数据的带宽是64bits, 因此长度为4。
+	\item 
+	\begin{itemize}
+		\item 对于DDR2-667:$667 * 8 = 5336$MB/s
+		\item 对于DDR2-533:$533 * 8 = 4264$MB/s
+	\end{itemize}
+\end{enumerate}
+\end{document}
